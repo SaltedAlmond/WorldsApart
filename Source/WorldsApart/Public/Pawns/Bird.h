@@ -55,5 +55,4 @@ private:
 	
 	UPROPERTY(VisibleAnywhere)
 	UCameraComponent* ViewCamera;
-
 };
