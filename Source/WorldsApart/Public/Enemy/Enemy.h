@@ -11,6 +11,7 @@
 class UAnimMontage;
 class UAttributeComponent;
 class UHealthBarComponent;
+class UPawnSensingComponent;
 
 UCLASS()
 class WORLDSAPART_API AEnemy : public ACharacter, public IHitInterface
@@ -25,11 +26,19 @@ public:
 	virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
 
 private:
-	UPROPERTY(VisibleAnywhere)
+
+	/*
+	* Components
+	*/
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	UAttributeComponent* Attributes;
 
 	UPROPERTY(VisibleAnywhere)
 	UHealthBarComponent* HealthBarWidget;
+
+	UPROPERTY(VisibleAnywhere)
+	UPawnSensingComponent* PawnSensing;
 
 	/**
 	*	Animation Montages
@@ -48,6 +57,9 @@ private:
 
 	UPROPERTY(EditAnywhere)
 	double PatrolRadius = 200.f;
+
+	UPROPERTY(EditAnywhere)
+	double AttackRadius = 150.f;
 
 	/**
 	* Navigation
@@ -71,6 +83,10 @@ private:
 	UPROPERTY(EditAnywhere, Category = "AI Navigation")
 	float WaitMax = 10.f;
 
+	const float ChaseSpeed = 300.f;
+
+	EEnemyState EnemyState = EEnemyState::EES_Patrolling;
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -81,6 +97,9 @@ protected:
 	void MoveToTarget(AActor* Target);
 
 	AActor* ChoosePatrolTarget();
+
+	UFUNCTION()
+	void PawnSeen(APawn* SeenPawn);
 
 	/**
 	* Play Montage Functions
