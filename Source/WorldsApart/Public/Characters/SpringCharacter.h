@@ -25,7 +25,6 @@ class WORLDSAPART_API ASpringCharacter : public ABaseCharacter
 
 public:
 	ASpringCharacter();
-	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 protected:
@@ -52,48 +51,34 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
 	UInputAction* DodgeAction;
 
-	/*
-	* Callback for input
-	*/
+	/** Callback for input */
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
 	virtual void Jump() override;
 	void EKeyPressed();
 	virtual void Attack() override;
-	void Dodge();
 
-	/**
-	* Play Montage Functions
-	*/
-	virtual void PlayAttackMontage() override;
+	/** Combat */
+	void EquipWeapon(AWeapon* Weapon);
 	virtual	void AttackEnd() override;
-
 	virtual bool CanAttack() override;
-
-	void PlayEquipMontage(const FName& SectionName);
 	bool CanDisarm();
 	bool CanArm();
+	void Disarm();
+	void Arm();
+	void PlayEquipMontage(const FName& SectionName);
 
 	UFUNCTION(BlueprintCallable)
-	void Disarm();
+	void AttachWeaponToBack();
 	
 	UFUNCTION(BlueprintCallable)
-	void Arm();
+	void AttachWeaponToHand();
 	
 	UFUNCTION(BlueprintCallable)
 	void FinishEquipping();
 
 private:
-	ECharacterState CharacterState = ECharacterState::ECS_Unequipped;
-	
-	UPROPERTY(BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
-	EActionState ActionState = EActionState::EAS_Unoccupied;
-
-	UPROPERTY(VisibleAnywhere)
-	UCapsuleComponent* Capsule;
-
-	UPROPERTY(VisibleAnywhere)
-	USkeletalMeshComponent* BirdMesh;
+	/** Character Components */
 
 	UPROPERTY(VisibleAnywhere)
 	USpringArmComponent* CameraBoom;
@@ -106,6 +91,11 @@ private:
 	
 	UPROPERTY(EditDefaultsOnly, Category = Montages)
 	UAnimMontage* EquipMontage;
+
+	ECharacterState CharacterState = ECharacterState::ECS_Unequipped;
+
+	UPROPERTY(BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
+	EActionState ActionState = EActionState::EAS_Unoccupied;
 
 public:
 	FORCEINLINE void SetOverlappingItem(AItem* Item) { OverlappingItem = Item; }

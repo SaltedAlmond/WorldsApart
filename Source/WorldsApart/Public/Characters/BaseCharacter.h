@@ -18,33 +18,42 @@ class WORLDSAPART_API ABaseCharacter : public ACharacter, public IHitInterface
 
 public:
 	ABaseCharacter();
+	/** <AActor> */
 	virtual void Tick(float DeltaTime) override;
+	/** </AActor> */
+
+protected:
+	/** <AActor> */
+	virtual void BeginPlay() override;
+	/** </AActor> */
+
+	virtual void Attack();
+	virtual void Die();
+	void DirectionalHitReact(const FVector& ImpactPoint);
+	virtual void HandleDamage(float DamageAmount);
+	void DisableCapsule();
+	virtual bool CanAttack();
+	bool IsAlive();
+	void PlayHitReactMontage(const FName& SectionName);
+	virtual int32 PlayAttackMontage();
+	virtual int32 PlayDeathMontage();
+
+	UFUNCTION(BlueprintCallable)
+	virtual void AttackEnd();
 
 	UFUNCTION(BlueprintCallable)
 	void SetWeaponCollisionEnabled(ECollisionEnabled::Type CollisionEnabled);
 
-protected:
-	virtual void BeginPlay() override;
-	virtual void Attack();
-	virtual void Die();
-
-	/**
-	* Play Montage Functions
-	*/
-	virtual void PlayAttackMontage();
-	void PlayHitReactMontage(const FName& SectionName);
-	void DirectionalHitReact(const FVector& ImpactPoint);
-
-	virtual bool CanAttack();
-	UFUNCTION(BlueprintCallable)
-	virtual void AttackEnd();
-
 	UPROPERTY(VisibleAnywhere, Category = Weapon)
 	AWeapon* EquippedWeapon;
 
-	/**
-	*	Animation Montages
-	*/
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	UAttributeComponent* Attributes;
+
+private:
+	void PlayMontageSection(UAnimMontage* Montage, const FName& SectionName);
+	int32 PlayRandomMontageSection(UAnimMontage* Montage, const TArray<FName>& SectionNames);
+
 	UPROPERTY(EditDefaultsOnly, Category = Montages)
 	UAnimMontage* AttackMontage;
 
@@ -54,9 +63,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = Montages)
 	UAnimMontage* DeathMontage;
 
-	/*
-	* Components
-	*/
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	UAttributeComponent* Attributes;
+	UPROPERTY(EditAnywhere, Category = Combat);
+	TArray<FName> AttackMontageSections;
+
+	UPROPERTY(EditAnywhere, Category = Combat);
+	TArray<FName> DeathMontageSections;
 };

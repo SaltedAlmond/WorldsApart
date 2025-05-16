@@ -11,11 +11,10 @@
 #include "Items/Item.h"
 #include "Items/Weapons/Weapon.h"
 #include "Animation/AnimMontage.h"
-#include "Components/BoxComponent.h"
 
 ASpringCharacter::ASpringCharacter()
 {
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false;
 
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = false;
@@ -32,6 +31,20 @@ ASpringCharacter::ASpringCharacter()
 
 	ViewCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("ViewCamera"));
 	ViewCamera->SetupAttachment(CameraBoom);
+}
+
+void ASpringCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
+{
+	Super::SetupPlayerInputComponent(PlayerInputComponent);
+
+	if (UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(PlayerInputComponent))
+	{
+		EnhancedInputComponent->BindAction(MovementAction, ETriggerEvent::Triggered, this, &ASpringCharacter::Move);
+		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ASpringCharacter::Look);
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Triggered, this, &ASpringCharacter::Jump);
+		EnhancedInputComponent->BindAction(EKeyAction, ETriggerEvent::Triggered, this, &ASpringCharacter::EKeyPressed);
+		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Triggered, this, &ASpringCharacter::Attack);
+	}
 }
 
 void ASpringCharacter::BeginPlay()
@@ -83,35 +96,42 @@ void ASpringCharacter::EKeyPressed()
 	AWeapon* OverlappingWeapon = Cast <AWeapon>(OverlappingItem);
 	if (OverlappingWeapon)
 	{
-		OverlappingWeapon->Equip(GetMesh(), FName("RightHandSocket"), this, this);
-		CharacterState = ECharacterState::ECS_EquippedOneHandedWeapon;
-		OverlappingItem = nullptr;
-		EquippedWeapon = OverlappingWeapon;
+		EquipWeapon(OverlappingWeapon);
 	}
 	else 
 	{
 		if (CanDisarm())
 		{
-			PlayEquipMontage(FName("Unequip"));
-			CharacterState = ECharacterState::ECS_Unequipped;
-			ActionState = EActionState::EAS_EquippingWeapon;
+			Disarm();
 		}
 		else if (CanArm())
 		{
-			PlayEquipMontage(FName("Equip"));
-			CharacterState = ECharacterState::ECS_EquippedOneHandedWeapon;
-			ActionState = EActionState::EAS_EquippingWeapon;
+			Arm();
 		}
 	}
 }
 
 void ASpringCharacter::Attack()
 {
+	Super::Attack();
 	if (CanAttack())
 	{
 		PlayAttackMontage();
 		ActionState = EActionState::EAS_Attacking;
 	}
+}
+
+void ASpringCharacter::EquipWeapon(AWeapon* Weapon)
+{
+	Weapon->Equip(GetMesh(), FName("RightHandSocket"), this, this);
+	CharacterState = ECharacterState::ECS_EquippedOneHandedWeapon;
+	OverlappingItem = nullptr;
+	EquippedWeapon = Weapon;
+}
+
+void ASpringCharacter::AttackEnd()
+{
+	ActionState = EActionState::EAS_Unoccupied;
 }
 
 bool ASpringCharacter::CanAttack()
@@ -135,50 +155,16 @@ bool ASpringCharacter::CanArm()
 
 void ASpringCharacter::Disarm()
 {
-	if (EquippedWeapon)
-	{
-		EquippedWeapon->AttachMeshToSocket(GetMesh(), FName("SpineSocket"));
-	}
+	PlayEquipMontage(FName("Unequip"));
+	CharacterState = ECharacterState::ECS_Unequipped;
+	ActionState = EActionState::EAS_EquippingWeapon;
 }
 
 void ASpringCharacter::Arm()
 {
-	if (EquippedWeapon)
-	{
-		EquippedWeapon->AttachMeshToSocket(GetMesh(), FName("RightHandSocket"));
-	}
-}
-
-void ASpringCharacter::FinishEquipping()
-{
-	ActionState = EActionState::EAS_Unoccupied;
-}
-
-void ASpringCharacter::Dodge()
-{
-}
-
-void ASpringCharacter::PlayAttackMontage()
-{
-	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
-	if (AnimInstance && AttackMontage)
-	{
-		AnimInstance->Montage_Play(AttackMontage);
-		const int32 Selection = FMath::RandRange(0, 1);
-		FName SectionName = FName();
-		switch (Selection)
-		{
-		case 0:
-			SectionName = FName("Attack1");
-			break;
-		case 1:
-			SectionName = FName("Attack2");
-			break;
-		default:
-			break;
-		}
-		AnimInstance->Montage_JumpToSection(SectionName, AttackMontage);
-	}
+	PlayEquipMontage(FName("Equip"));
+	CharacterState = ECharacterState::ECS_EquippedOneHandedWeapon;
+	ActionState = EActionState::EAS_EquippingWeapon;
 }
 
 void ASpringCharacter::PlayEquipMontage(const FName& SectionName)
@@ -191,27 +177,23 @@ void ASpringCharacter::PlayEquipMontage(const FName& SectionName)
 	}
 }
 
-void ASpringCharacter::AttackEnd()
+void ASpringCharacter::AttachWeaponToBack()
+{
+	if (EquippedWeapon)
+	{
+		EquippedWeapon->AttachMeshToSocket(GetMesh(), FName("SpineSocket"));
+	}
+}
+
+void ASpringCharacter::AttachWeaponToHand()
+{
+	if (EquippedWeapon)
+	{
+		EquippedWeapon->AttachMeshToSocket(GetMesh(), FName("RightHandSocket"));
+	}
+}
+
+void ASpringCharacter::FinishEquipping()
 {
 	ActionState = EActionState::EAS_Unoccupied;
-}
-
-void ASpringCharacter::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-}
-
-void ASpringCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
-{
-	Super::SetupPlayerInputComponent(PlayerInputComponent);
-
-	if (UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(PlayerInputComponent))
-	{
-		EnhancedInputComponent->BindAction(MovementAction, ETriggerEvent::Triggered, this, &ASpringCharacter::Move);
-		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ASpringCharacter::Look);
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Triggered, this, &ASpringCharacter::Jump);
-		EnhancedInputComponent->BindAction(EKeyAction, ETriggerEvent::Triggered, this, &ASpringCharacter::EKeyPressed);
-		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Triggered, this, &ASpringCharacter::Attack);
-		EnhancedInputComponent->BindAction(DodgeAction, ETriggerEvent::Triggered, this, &ASpringCharacter::Dodge);
-	}
 }
