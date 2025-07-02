@@ -1,2 +1,2 @@
 # WorldsApart
- NimbusSouls Game Project
+Personal Game Project in Unreal Engine
